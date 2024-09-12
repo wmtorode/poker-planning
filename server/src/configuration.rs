@@ -14,6 +14,8 @@ pub struct ApplicationSettings {
     pub port: u16,
     pub host: String,
     pub base_url: String,
+    pub key_file: String,
+    pub cert_file: String,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
@@ -49,6 +51,14 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
 impl Settings {
     pub fn get_server_address(&self) -> String {
         format!("{}:{}", self.application.host, self.application.port)
+    }
+
+    pub fn get_key_file(&self) -> String {
+        self.application.key_file.clone()
+    }
+
+    pub fn get_cert_file(&self) -> String {
+        self.application.cert_file.clone()
     }
 }
 

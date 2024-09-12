@@ -6,11 +6,22 @@ use crate::{
 };
 use actix_cors::Cors;
 
+use std::{
+    fs::File,
+    io::{self, Read as _},
+};
+
 use actix_web::{
     guard, middleware,
     web::{self, Data},
     App, HttpServer,
 };
+use openssl::{
+    pkey::{PKey, Private},
+    ssl::{SslAcceptor, SslMethod},
+};
+
+
 use async_graphql::Schema;
 use env_logger::Env;
 
@@ -37,6 +48,17 @@ async fn main() -> std::io::Result<()> {
         .data(storage.clone())
         .finish();
 
+    // build TLS config from files
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+
+    // set the unencrypted private key
+    builder
+        .set_private_key_file(settings.get_key_file(), openssl::ssl::SslFiletype::PEM)
+        .unwrap();
+
+    // set the certificate chain file location
+    builder.set_certificate_chain_file(settings.get_cert_file()).unwrap();
+
     println!("Playground: http://{}", server_address);
 
     HttpServer::new(move || {
@@ -58,7 +80,7 @@ async fn main() -> std::io::Result<()> {
                     .to(health_check),
             )
     })
-    .bind(server_address)?
+    .bind_openssl(server_address, builder)?
     .run()
     .await
 }
