@@ -1,17 +1,18 @@
-import Box from '@mui/material/Box';
-import { ReactElement, useEffect, useRef } from 'react';
-import { toast } from 'react-hot-toast';
-import { useParams } from 'react-router-dom';
+import { useParams } from "@tanstack/react-router";
+import { ReactElement, useEffect, useRef } from "react";
 
-import { useJoinRoomMutation, useRoomSubscription } from 'api';
-import { Deck, PageLayout, Room } from 'components';
-import { CreateUserDialog } from 'components/CreateUserDialog';
-import { useAuth } from 'contexts';
-import { User } from 'types';
+import { useJoinRoomMutation, useRoomSubscription } from "@/api";
+import { Deck, PageLayout, Room } from "@/components";
+import { CreateUserDialog } from "@/components/CreateUserDialog";
+import { VoteDistributionChart } from "@/components/vote-distribution-chart";
+import { useAuth } from "@/contexts";
+import { useToast } from "@/hooks/use-toast";
+import { User } from "@/types";
 
 export function RoomPage(): ReactElement {
-  const { roomId = '' } = useParams();
+  const { roomId } = useParams({ from: "/room/$roomId" });
   const { user } = useAuth();
+  const { toast } = useToast();
   const isJoinRoomCalledRef = useRef(false);
 
   const { data: subscriptionData, error: roomSubscriptionError } =
@@ -21,13 +22,21 @@ export function RoomPage(): ReactElement {
 
   useEffect(() => {
     if (roomSubscriptionError) {
-      toast.error(`Room subscription: ${roomSubscriptionError.message}`);
+      toast({
+        title: "Error",
+        description: `Room subscription: ${roomSubscriptionError.message}`,
+        variant: "destructive",
+      });
     }
-  }, [roomSubscriptionError]);
+  }, [roomSubscriptionError, toast]);
 
   const [joinRoomMutation, { data: joinRoomData }] = useJoinRoomMutation({
     onError: (error) => {
-      toast.error(`Join room: ${error.message}`);
+      toast({
+        title: "Error",
+        description: `Join room: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -64,23 +73,20 @@ export function RoomPage(): ReactElement {
         {room && (
           <>
             <Room room={room} />
-            <Box
-              sx={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 24,
-                maxWidth: 900,
-                margin: '0 auto',
-              }}
-            >
-              <Deck
-                roomId={roomId}
-                isGameOver={room.isGameOver}
-                cards={room.deck.cards}
-                table={room.game.table}
-              />
-            </Box>
+            <div className="absolute left-0 right-0 bottom-4 mx-auto my-0 max-w-4xl overflow-auto">
+              {room.isGameOver ? (
+                <div className="flex justify-center">
+                  <VoteDistributionChart room={room} />
+                </div>
+              ) : (
+                <Deck
+                  roomId={roomId}
+                  isGameOver={room.isGameOver}
+                  cards={room.deck.cards}
+                  table={room.game.table}
+                />
+              )}
+            </div>
           </>
         )}
       </PageLayout>
