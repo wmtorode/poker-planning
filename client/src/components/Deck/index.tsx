@@ -1,13 +1,13 @@
-import Box from '@mui/material/Box';
-import { ReactElement, useEffect, useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { ReactElement, useEffect, useState } from "react";
 
-import { usePickCardMutation } from 'api';
-import { Card } from 'components/Card';
-import { useAuth } from 'contexts';
-import { useKeyboardControls } from 'hooks';
-import { UserCard } from 'types';
-import { getPickedUserCard } from 'utils';
+import { usePickCardMutation } from "@/api";
+import { Card } from "@/components/Card";
+import { useAuth } from "@/contexts";
+import { useKeyboardControls } from "@/hooks";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { UserCard } from "@/types";
+import { getPickedUserCard } from "@/utils";
 
 interface DeckProps {
   roomId: string;
@@ -24,12 +24,17 @@ export function Deck({
 }: DeckProps): ReactElement {
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
   const { cardsContainerRef } = useKeyboardControls();
 
   const [pickCardMutation] = usePickCardMutation({
     onError(error) {
       setSelectedCard(null);
-      toast.error(`Pick card: ${error.message}`);
+      toast({
+        title: "Error",
+        description: `Pick card: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -55,35 +60,27 @@ export function Deck({
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-      }}
-      ref={cardsContainerRef}
-    >
+    <div className="flex justify-between items-end" ref={cardsContainerRef}>
       {cards.map((card) => {
         const isCardPicked = selectedCard === card;
         return (
-          <Box
+          <div
             key={card}
-            sx={{
-              marginBottom: isCardPicked ? '12px' : 0,
-              transition: 'margin-Bottom 0.1s ease-in-out',
-            }}
+            className={cn(
+              "transition-margin-bottom duration-100",
+              isCardPicked ? "mb-8" : "mb-0",
+            )}
           >
             <Card
               onClick={handleCardClick(card)}
               disabled={isGameOver}
-              variant={isCardPicked ? 'contained' : 'outlined'}
-              disableElevation
+              variant={isCardPicked ? "default" : "outline"}
             >
               {card}
             </Card>
-          </Box>
+          </div>
         );
       })}
-    </Box>
+    </div>
   );
 }

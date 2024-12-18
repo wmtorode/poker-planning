@@ -1,19 +1,62 @@
-import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import path from "path";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv, Plugin } from "vite";
+
+// Custom plugin to inject Google Analytics script in production
+const injectGoogleAnalytics = ({
+  mode,
+  GOOGLE_ANALYTICS_ID,
+}: {
+  mode: string;
+  GOOGLE_ANALYTICS_ID: string;
+}): Plugin => ({
+  name: "inject-google-analytics",
+  transformIndexHtml: {
+    order: "pre",
+    handler(html) {
+      if (mode === "production") {
+        if (GOOGLE_ANALYTICS_ID) {
+          const googleAnalyticsScript = `
+            <!-- Google tag (gtag.js) -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag() { dataLayer.push(arguments); }
+              gtag('js', new Date());
+              gtag('config', '${GOOGLE_ANALYTICS_ID}');
+            </script>
+          `;
+          return html.replace("</head>", `${googleAnalyticsScript}</head>`);
+        }
+      }
+      return html;
+    },
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, process.cwd(), "");
   const GRAPHQL_ENDPOINT = env.VITE_GRAPHQL_ENDPOINT;
+  const GOOGLE_ANALYTICS_ID = env.VITE_GOOGLE_ANALYTICS_ID;
 
-  console.log('GRAPHQL_ENDPOINT', GRAPHQL_ENDPOINT);
+  console.log("GRAPHQL_ENDPOINT", GRAPHQL_ENDPOINT);
 
   return {
-    plugins: [tsconfigPaths(), react()],
+    plugins: [
+      TanStackRouterVite(),
+      react(),
+      injectGoogleAnalytics({ mode, GOOGLE_ANALYTICS_ID }),
+    ],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
     server: {
       proxy: {
-        '/api': {
+        "/api": {
           target: GRAPHQL_ENDPOINT,
           changeOrigin: true,
           ws: true,
@@ -22,8 +65,8 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       globals: true,
-      environment: 'jsdom',
-      setupFiles: './src/test/setup.ts',
+      environment: "jsdom",
+      setupFiles: "./src/test/setup.ts",
     },
   };
 });
